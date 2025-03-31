@@ -138,7 +138,6 @@ controller_server:
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25
       yaw_goal_tolerance: 1.0
-    # DWB parameters
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
@@ -152,7 +151,7 @@ controller_server:
       min_speed_theta: 0.0
       # Add high threshold velocity for turtlebot 3 issue.
       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
-      acc_lim_x: 2.2
+      acc_lim_x: 1.5
       acc_lim_y: 0.0
       acc_lim_theta: 3.2
       decel_lim_x: -2.0
@@ -184,7 +183,7 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
+      update_frequency: 10.0
       publish_frequency: 2.0
       global_frame: odom
       robot_base_frame: base_link
@@ -218,8 +217,8 @@ local_costmap:
           topic: /livox/lidar
           marking: true
           clearing: false
-          obstacle_range: 3.0 # meters
-          min_obstacle_height: 0.1 # default 0, meters
+          obstacle_range: 5.0 # meters
+          min_obstacle_height: 0.0 # default 0, meters
           max_obstacle_height: 0.6 # default 3, meters
           expected_update_rate: 0.0 # default 0, if not updating at this rate at least, remove from buffer
           observation_persistence: 0.0 # default 0, use all measurements taken during now-value, 0=latest
@@ -233,38 +232,12 @@ local_costmap:
           marking: false
           clearing: true
           max_z: 20.0 # default 0, meters
-          min_z: 0.05 # default 10, meters
+          min_z: -0.05 # default 10, meters
           vertical_fov_angle: 1.03 # Note: This the full fov.
           vertical_fov_padding: 0.1 # 3D Lidar only. Default 0, in meters
           horizontal_fov_angle: 6.29 # 3D lidar scanners like the VLP16 have 360 deg horizontal FOV.
           decay_acceleration: 5.0 # default 0, 1/s^2.
           model_type: 1 # default 0, model type for frustum. 0=depth camera, 1=3d lidar like VLP16 or similar
-      stvl_layer:
-        plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
-        enabled: True
-        voxel_decay: 2.
-        decay_model: 0
-        voxel_size: 0.05
-        track_unknown_space: true
-        unknown_threshold: 15
-        mark_threshold: 0
-        combination_method: 1
-        origin_z: 0.0
-        publish_voxel_map: true
-        transform_tolerance: 0.4
-        observation_sources: pointcloud
-        pointcloud:
-          topic: /livox/lidar
-          clearing: True
-          marking: True
-          data_type: PointCloud2
-          obstacle_range: 5.0
-          min_obstacle_height: 0.0
-          max_obstacle_height: 0.6
-          filter: "voxel"
-          voxel_min_points: 0
-          clear_after_reading: true
-          model_type: 1
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -273,15 +246,15 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      update_frequency: 10.0
+      update_frequency: 5.0
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: True
-      robot_radius: 0.22
+      robot_radius: 0.31
       resolution: 0.05
       track_unknown_space: true
-      plugins: ["static_layer", "inflation_layer"]
+      plugins: ["static_layer", "3d_lidar_layer", "inflation_layer"]
       3d_lidar_layer:
         plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
         enabled: true
@@ -301,9 +274,9 @@ global_costmap:
           topic: /livox/lidar
           marking: true
           clearing: false
-          obstacle_range: 3.0 # meters
-          min_obstacle_height: -3.0 # default 0, meters
-          max_obstacle_height: 15.0 # default 3, meters
+          obstacle_range: 5.0 # meters
+          min_obstacle_height: 0.0 # default 0, meters
+          max_obstacle_height: 0.6 # default 3, meters
           expected_update_rate: 0.0 # default 0, if not updating at this rate at least, remove from buffer
           observation_persistence: 0.0 # default 0, use all measurements taken during now-value, 0=latest
           inf_is_valid: false # default false, for laser scans
@@ -316,26 +289,12 @@ global_costmap:
           marking: false
           clearing: true
           max_z: 20.0 # default 0, meters
-          min_z: 0.05 # default 10, meters
+          min_z: -0.05 # default 10, meters
           vertical_fov_angle: 1.03 # Note: This the full fov.
           vertical_fov_padding: 0.1 # 3D Lidar only. Default 0, in meters
           horizontal_fov_angle: 6.29 # 3D lidar scanners like the VLP16 have 360 deg horizontal FOV.
           decay_acceleration: 5.0 # default 0, 1/s^2.
           model_type: 1 # default 0, model type for frustum. 0=depth camera, 1=3d lidar like VLP16 or similar
-      obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
-        observation_sources: scan
-        scan:
-          topic: /scan
-          max_obstacle_height: 20.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 6.5
-          raytrace_min_range: 0.15
-          obstacle_max_range: 6.0
-          obstacle_min_range: 0.1
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -426,10 +385,10 @@ velocity_smoother:
     use_sim_time: True
     smoothing_frequency: 20.0
     scale_velocities: False
-    feedback: "CLOSED_LOOP"
+    feedback: "OPEN_LOOP"
     max_velocity: [1.0, 0.0, 1.5]
     min_velocity: [-0.5, 0.0, -1.5]
-    max_accel: [2.2, 0.0, 3.2]
+    max_accel: [1.5, 0.0, 3.2]
     max_decel: [-2.0, 0.0, -3.2]
     odom_topic: "odom"
     odom_duration: 0.02
